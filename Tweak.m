@@ -12,7 +12,20 @@ static bool shouldEnableForBundleIdentifier(NSString *bundleIdentifier)
 #ifdef JAILED
     return true;
 #else
+    if (bundleIdentifier.length == 0) {
+        return false;
+    }
+
+    // The preference bundle writes "apps" through the defaults system, so read it the same way first;
+    // a sandboxed game may not be allowed to open the plist file directly.
+    NSArray *apps = CFBridgingRelease(CFPreferencesCopyAppValue(CFSTR("apps"), CFSTR("dev.mineek.memedit")));
+    if ([apps isKindOfClass:NSArray.class]) {
+        NSLog(@"[memedit] apps list read through preferences (%lu entries)", (unsigned long)apps.count);
+        return [apps containsObject:bundleIdentifier];
+    }
+
     NSDictionary *preferences = [NSDictionary dictionaryWithContentsOfFile:@"/var/jb/var/mobile/Library/Preferences/dev.mineek.memedit.plist"];
+    NSLog(@"[memedit] no apps list from preferences; plist file is %s", preferences ? "readable" : "not readable");
     return [preferences[@"apps"] containsObject:bundleIdentifier];
 #endif
 }
